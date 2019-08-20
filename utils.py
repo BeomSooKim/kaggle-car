@@ -4,10 +4,9 @@ import torchvision as vision
 import torchsummary
 from PIL import Image
 import numpy as np
-import os
+import os, random
 
-# fix random seed function
-
+# cut-out augmentation module
 class RandomErase(object):
     '''
     ToTensor -> Erase -> Normalize
@@ -40,6 +39,35 @@ class RandomErase(object):
 
         return img
 
+# define custom data loader and image transformer
+class Dataloader(torch.utils.data.Dataset):
+	def __init__(self, image_path, labels, root_dir, transform = None):
+		self.image_path = image_path
+		self.labels = labels
+		self.root_dir = root_dir # image foloder
+		self.transform = transform
+		
+	def __len__(self):
+		return len(self.image_path)
+
+	def __getitem__(self, index):
+		image = Image.open(os.path.sep.join([self.root_dir, self.image_path[index]])).convert("RGB")
+		label = self.labels[index]
+		
+		image = self.transform(image)
+		
+		return image, label
+
+# fix random seed function
+def set_seed(seed):
+    random.seed(SEED)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+
+# mix-up augmentation
 def mixup(x, y, alpha, device):
     batch_size = x.shape[0]
     
@@ -47,7 +75,7 @@ def mixup(x, y, alpha, device):
         lambda_ = np.random.beta(alpha, alpha)
     else:
         lambda_ = np.ones((batch_size))
-    lambda_ = torch.tensor(lambda)
+    #lambda_ = torch.tensor(lambda_)
     suffled_idx = np.arange(batch_size)
     shuffled_idx = np.random.shuffle(batch_size)
 
@@ -56,12 +84,13 @@ def mixup(x, y, alpha, device):
 
     return mixed_x, mixed_y
 
+# transformer for training data
 train_aug = vision.transforms.Compose([
     vision.transforms.Resize(256),
     vision.transforms.RandomCrop(224),
     vision.transforms.RandomAffine(
         degrees = (-20,20),
-        translate(0.1, 0.1),
+        translate = (0.1, 0.1),
         scale = (0.8, 1.2),
         shear = 0.1
     ),
@@ -71,13 +100,15 @@ train_aug = vision.transforms.Compose([
     vision.transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
 ])
 
+# transformer for validation data
 val_aug = vision.transforms.Compose([
     vision.transforms.Resize(256),
     vision.transforms.CenterCrop(224),
     vision.transforms.ToTensor(),
     vision.transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
 ])
-    
+
+# transformer for test data    
 test_aug = vision.transforms.Compose([
     vision.transforms.Resize(256),
     vision.transforms.CenterCrop(224),
@@ -85,7 +116,6 @@ test_aug = vision.transforms.Compose([
     vision.transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
 ])
 
-class Dataset(torch.utils.data.Dataset):
-
-class DataLoader(torch.utils.data.DataLoader):
-
+# string argument to bool
+def str2bool(arg):
+    return str(arg).lower() in ['t','1','true']
