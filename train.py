@@ -22,9 +22,9 @@ parser.add_argument('-cr','--crop_size', required = False, default = 224, type =
 args = parser.parse_args()
 
 def train(args):
+    # define argument
     epoch = args.epoch
     batch_size = args.batch_size
-    seed = args.seed
     base_lr = args.base_lr
     save_dir = args.save_dir
     root_dir = args.root_dir
@@ -40,25 +40,30 @@ def train(args):
     print('crop image size : {}'.format(crop_size))
 
     save_cur_dir = save_dir + '/' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    # set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # load meta file
     meta = pd.read_csv('D:/dataset/2019-3rd-ml-month-with-kakr/train.csv')
     meta = meta[['img_file','class']]
+    meta['class'].replace(196, 0, inplace = True) # class index starts from 0
     meta['img_file'] = meta['img_file'].str.replace('.jpg','.png')
     n_class = meta['class'].nunique()
 
     # split train, validation dataset
     fold = StratifiedKFold(n_splits = 3, shuffle = True, random_state = SEED)
     for i, (train_idx, val_idx) in enumerate(fold.split(meta['img_file'], meta['class'])):
-    	cv_dir = os.path.sep.join([save_cur_dir, 'fold{}'.format(i+1)])
+    	# fold{x} path
+        cv_dir = os.path.sep.join([save_cur_dir, 'fold{}'.format(i+1)])
         os.makedirs(cv_dir)
+        # split train, validation set
         trainX = list(meta['img_file'][train_idx])
         valX = list(meta['img_file'][val_idx])
         trainY = list(meta['class'][train_idx])
         valY = list(meta['class'][val_idx])
         print(trainX[:3], valX[:3], trainY[:3], valY[:3])
-
-        trainData = Dataloader(trainX, trainY, os.path.sep.join([root_dir, 'train']), transform = train_trn)
-	    valData = Dataloader(valX, valY, os.path.sep.join([root_dir, 'train']), transform = val_trn)
+        # define dataloader
+        trainData = myDataset(trainX, trainY, os.path.sep.join([root_dir, 'train']), transform = train_trn)
+	    valData = myDataset(valX, valY, os.path.sep.join([root_dir, 'train']), transform = val_trn)
     	trainLoader = torch.utils.data.DataLoader(
 		dataset = trainData,
 		batch_size = batch_size,
@@ -68,7 +73,7 @@ def train(args):
         valLoader = torch.utils.data.DataLoader(
             dataset = valData,
             batch_size = batch_size,
-            shuffle = True
+            shuffle = False
         )
 
         # define resnet model
@@ -99,6 +104,7 @@ def train(args):
                 optimizer.step()
             print()
             train_losses.append(loss.item())
+            # evaluation
             resnet.eval()
             with torch.no_grad():
                 correct = 0
@@ -110,9 +116,9 @@ def train(args):
 
                     output = resnet(image)
                     _, predict = torch.max(output, 1)
-                    val_loss = loss_fn(output, label)
                     total += label.size(0)
                     correct += (predict == label).sum().item()
+                    val_loss = loss_fn(output, label)
                 print()
             val_acc = correct / total * 100
             val_losses.append(val_loss.item())
@@ -120,7 +126,7 @@ def train(args):
             running_time = datetime.datetime.now() - start
             print("epoch : {}({} sec) / train loss : {:.4f} / val loss : {:.4f} / val_acc : {:.2f}%".format(e+1, running_time.seconds, loss.item(), val_loss.item(), val_acc))
             if val_acc > best_acc:
-                torch.save(resnet.state_dict(), os.path.sep.join([CV_DIR, 'model_{:03d}_{:.4f}_{:.2f}.pt'.format(e+1, val_loss.item(), val_acc)]))
+                torch.save(resnet.state_dict(), os.path.sep.join([cv_dir, 'model_{:03d}_{:.4f}_{:.2f}.pt'.format(e+1, val_loss.item(), val_acc)]))
                 best_acc = val_acc
             
             plt.figure(figsize = (8, 4))
@@ -132,4 +138,5 @@ def train(args):
 
             resnet.train()
 if __name__ == '__main__':
+    set_seed(args.seed)
     train(args)

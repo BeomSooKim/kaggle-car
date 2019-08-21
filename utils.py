@@ -40,7 +40,7 @@ class RandomErase(object):
         return img
 
 # define custom data loader and image transformer
-class Dataloader(torch.utils.data.Dataset):
+class myDataset(torch.utils.data.Dataset):
 	def __init__(self, image_path, labels, root_dir, transform = None):
 		self.image_path = image_path
 		self.labels = labels
@@ -68,21 +68,25 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 # mix-up augmentation
-def mixup(x, y, alpha, device):
-    batch_size = x.shape[0]
-    
+def mixup_criterion(criterion, pred, y_a, y_b, lam):
+    return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
+
+def mixup_data(x, y, device, alpha=1.0):
+    '''Returns mixed inputs, pairs of targets, and lambda'''
     if alpha > 0:
-        lambda_ = np.random.beta(alpha, alpha)
+        lam = np.random.beta(alpha, alpha)
     else:
-        lambda_ = np.ones((batch_size))
-    #lambda_ = torch.tensor(lambda_)
-    suffled_idx = np.arange(batch_size)
-    shuffled_idx = np.random.shuffle(batch_size)
+        lam = 1
 
-    mixed_x = lambda_*x + (1-lambda_) * x[shuffled_idx,:,:,:]
-    mixed_y = lambda_*y + (1-lambda_) * y[shuffled_idx]
+    batch_size = x.size()[0]
+    if use_cuda:
+        index = torch.randperm(batch_size).to(device)
+    else:
+        index = torch.randperm(batch_size)
 
-    return mixed_x, mixed_y
+    mixed_x = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b = y, y[index]
+    return mixed_x, y_a, y_b, lam
 
 # transformer for training data
 train_aug = vision.transforms.Compose([
