@@ -34,7 +34,7 @@ class RandomErase(object):
         new_H = int(h_r * new_W)
         h_point = np.random.randint(H - new_H, size = 1)[0]
         w_point = np.random.randint(W - new_W, size = 1)[0]
-        print(h_point, new_H, w_point, new_W)
+        #print(h_point, new_H, w_point, new_W)
         img[:,h_point:h_point+new_H,w_point:w_point + new_W] = 0
 
         return img
@@ -43,7 +43,7 @@ class RandomErase(object):
 class myDataset(torch.utils.data.Dataset):
 	def __init__(self, image_path, labels, root_dir, transform = None):
 		self.image_path = image_path
-		self.labels = labels
+		self.labels = None
 		self.root_dir = root_dir # image foloder
 		self.transform = transform
 		
@@ -52,15 +52,18 @@ class myDataset(torch.utils.data.Dataset):
 
 	def __getitem__(self, index):
 		image = Image.open(os.path.sep.join([self.root_dir, self.image_path[index]])).convert("RGB")
-		label = self.labels[index]
+		if self.transform is not None:
+			image = self.transform(image)
 		
-		image = self.transform(image)
-		
-		return image, label
+		if self.labels is not None:
+			label = self.labels[index]
+			return image, label
+		else:
+			return image
 
 # fix random seed function
 def set_seed(seed):
-    random.seed(SEED)
+    random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
