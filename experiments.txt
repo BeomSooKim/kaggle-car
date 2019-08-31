@@ -1,0 +1,5 @@
+folder  fold    val_acc public_score        tta desc
+20190822-072518 fold2   90.21%  73.79%  5   baseline 모델
+20190828-081444 fold1   89.52%  85.89%  5	cifar10 auto augmentation 사용 
+20190828-233357 fold1   92.80%  85.32%	5	input size 256으로 조정
+20190828-233357 fold3   92.24%  83.26%	5	input size 256으로 조정

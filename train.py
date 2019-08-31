@@ -20,8 +20,8 @@ parser.add_argument('-l','--base_lr', required = False, default = 0.0001, type =
 #parser.add_argument('-c','--cuda', required = False, default = True, type = str2bool, help = 'flag for using GPU')
 parser.add_argument('-sd','--save_dir', required = False, default = './models/', type = str, help = 'directory for saving model')
 parser.add_argument('-rd','--root_dir', required = False, type = str, default = 'D:/dataset/kaggle_car/', help = 'root dataset')
-parser.add_argument('-i','--img_size', required = False, default = 256, type = int, help = 'load image size')
-parser.add_argument('-cr','--crop_size', required = False, default = 224, type = int, help = 'crop size')
+#parser.add_argument('-i','--img_size', required = False, default = 256, type = int, help = 'load image size')
+#parser.add_argument('-cr','--crop_size', required = False, default = 224, type = int, help = 'crop size')
 
 args = parser.parse_args()
 
@@ -33,16 +33,16 @@ def train(args):
 	save_dir = args.save_dir
 	seed = args.seed
 	root_dir = args.root_dir
-	img_size = args.img_size
-	crop_size = args.crop_size
+	#img_size = args.img_size
+	#crop_size = args.crop_size
 
 	print('epochs : {}'.format(epoch))
 	print('batch_size : {}'.format(batch_size))
 	print('base_lr : {}'.format(base_lr))
 	print('save model to : {}'.format(save_dir))
 	print('load data from : {}'.format(root_dir))
-	print('load image size : {}'.format(img_size))
-	print('crop image size : {}'.format(crop_size))
+	#print('load image size : {}'.format(img_size))
+	#print('crop image size : {}'.format(crop_size))
 
 	save_cur_dir = save_dir + '/' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 	# set device
@@ -130,7 +130,7 @@ def train(args):
 			val_losses.append(val_loss.item())
 			scheduler.step(val_loss.item())
 			running_time = datetime.datetime.now() - start
-			print("epoch : {}({} sec) / train loss : {:.4f} / val loss : {:.4f} / val_acc : {:.4f}%".format(e+1, running_time.seconds, loss.item(), val_loss.item(), val_acc))
+			print("epoch : {}({} sec) / train loss : {:.4f} / val loss : {:.4f} / val_acc : {:.4f}".format(e+1, running_time.seconds, loss.item(), val_loss.item(), val_acc))
 			if val_acc > best_acc:
 				torch.save(resnet.state_dict(), os.path.sep.join([cv_dir, 'model_{:03d}_{:.4f}_{:.4f}.pt'.format(e+1, val_loss.item(), val_acc)]))
 				best_acc = val_acc
